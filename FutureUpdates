@@ -1,0 +1,5 @@
+[      x      ] Phase 1: Single-Node Engine (Chunking, SHA-256 Deduplication, WAL, LRU Cache).
+
+[ In Progress ] Phase 2: Control Plane API (Metadata Server routing and Flight Plans).
+
+[             ] Phase 3: Distributed Consensus (Primary-Follower Quorum replication and Heartbeats).
