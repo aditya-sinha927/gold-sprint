@@ -1,0 +1,40 @@
+High-Level Design (HLD)
+The architecture is split into two primary components to prevent network bottlenecks and ensure horizontal scalability.
+
+The architecture is split into two primary components to prevent network bottlenecks and ensure horizontal scalability.
+
+1. The Control Plane (Metadata Server)
+The "Brain" of the cluster. It holds zero actual file data.
+
+Namespace Management: Maintains an in-memory dictionary mapping logical filenames (video.mp4) to an ordered list of cryptographic block hashes.
+
+Traffic Control: Handles client upload requests, authenticates, and generates "Flight Plans" (load-balanced routing tables telling the client exactly which Storage Nodes to send their chunks to).
+
+Cluster Health: Monitors continuous heartbeats from Storage Nodes to detect hardware failures and trigger automated leader elections.
+
+2. The Data Plane (Storage Nodes)
+The "Muscle" of the cluster. These nodes are completely agnostic to "files" and only deal in raw 4MB binary chunks.
+
+Data Ingestion & Deduplication: Generates SHA-256 hashes of incoming data. If a hash already exists on disk, the write is bypassed, saving physical storage space.
+
+Write-Ahead Log (WAL): Guarantees strict consistency. Metadata is serialized to JSON, appended to a .log file, and physically flushed to the disk (os.fsync) before acknowledging the write to the client.
+
+LRU Cache Layer: Utilizes an OrderedDict data structure to maintain the most frequently accessed blocks in RAM, bypassing slow disk I/O for hot data.
+
+Quorum Replication: Uses a Primary-Follower model. The Primary node forwards chunks to Followers and acknowledges the client write only after a strict majority (Quorum) has safely committed the data to their respective WALs.
+
+[ Client ] 
+   │
+   │ 1. Request Upload (100MB File)
+   ▼
+[ Metadata Server ] ──> 2. Returns "Flight Plan" (Chunk 1 -> Node A, Chunk 2 -> Node C)
+   │
+   │ 3. Client bypasses Metadata Server, sending 4MB chunks directly to Nodes
+   ▼
+[ Storage Node A (Primary) ] ──> 4. Replicates to Follower Nodes
+   │      │
+   │      └──> [ Storage Node B (Follower) ]
+   │      └──> [ Storage Node C (Follower) ]
+   │
+   ▼ 5. Write Quorum Achieved (A & B confirm WAL fsync) -> Success Ack to Client
+[ Physical Disk / WAL ]
