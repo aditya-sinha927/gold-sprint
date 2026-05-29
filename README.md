@@ -1,7 +1,7 @@
 Distributed Block Storage Engine
 A lightweight, highly available distributed block storage prototype built entirely in Python.
 
-Overview
+Overview :
 Traditional monolithic file systems fail at petabyte scale. 
 This project implements a distributed approach by separating the Control Plane (metadata management) from the Data Plane (raw byte storage).
 Large files are stripped into uniform 4MB chunks, cryptographically hashed for system-wide deduplication, and replicated across isolated storage nodes using a Quorum-based consensus model.
